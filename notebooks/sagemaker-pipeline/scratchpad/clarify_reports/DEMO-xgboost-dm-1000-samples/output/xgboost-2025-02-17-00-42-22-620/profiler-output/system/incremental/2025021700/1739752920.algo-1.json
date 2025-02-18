@@ -1,0 +1,17 @@
+{"Type":"memory","Name":"MemoryUsedPercent","Dimension":"","Value":4.58,"NodeId":"algo-1","Timestamp":1739752979.001255}
+{"Type":"memory","Name":"MemoryUsedPercent","Dimension":"","Value":4.73,"NodeId":"algo-1","Timestamp":1739752979.501899}
+{"Type":"i/o","Name":"IOPS","Dimension":"","Value":23.95,"NodeId":"algo-1","Timestamp":1739752979.501951}
+{"Type":"i/o","Name":"ReadThroughputInBytesPerSecond","Dimension":"","Value":0.00,"NodeId":"algo-1","Timestamp":1739752979.501951}
+{"Type":"i/o","Name":"WriteThroughputInBytesPerSecond","Dimension":"","Value":5077211.47,"NodeId":"algo-1","Timestamp":1739752979.501951}
+{"Type":"cpu","Name":"cpu0","Dimension":"CPUUtilization","Value":100.00,"NodeId":"algo-1","Timestamp":1739752979.502069}
+{"Type":"cpu","Name":"cpu0","Dimension":"I/OWaitPercentage","Value":2.04,"NodeId":"algo-1","Timestamp":1739752979.502069}
+{"Type":"cpu","Name":"cpu1","Dimension":"CPUUtilization","Value":98.08,"NodeId":"algo-1","Timestamp":1739752979.502069}
+{"Type":"cpu","Name":"cpu1","Dimension":"I/OWaitPercentage","Value":1.92,"NodeId":"algo-1","Timestamp":1739752979.502069}
+{"Type":"cpu","Name":"cpu2","Dimension":"CPUUtilization","Value":100.00,"NodeId":"algo-1","Timestamp":1739752979.502069}
+{"Type":"cpu","Name":"cpu2","Dimension":"I/OWaitPercentage","Value":3.92,"NodeId":"algo-1","Timestamp":1739752979.502069}
+{"Type":"cpu","Name":"cpu3","Dimension":"CPUUtilization","Value":100.00,"NodeId":"algo-1","Timestamp":1739752979.502069}
+{"Type":"cpu","Name":"cpu3","Dimension":"I/OWaitPercentage","Value":2.04,"NodeId":"algo-1","Timestamp":1739752979.502069}
+{"Type":"network","Name":"ReceiveBytesPerSecond","Dimension":"Algorithm","Value":0.00,"NodeId":"algo-1","Timestamp":1739752979.509646}
+{"Type":"network","Name":"TransmitBytesPerSecond","Dimension":"Algorithm","Value":0.00,"NodeId":"algo-1","Timestamp":1739752979.509646}
+{"Type":"network","Name":"ReceiveBytesPerSecond","Dimension":"Platform","Value":93837843.80,"NodeId":"algo-1","Timestamp":1739752979.509646}
+{"Type":"network","Name":"TransmitBytesPerSecond","Dimension":"Platform","Value":159198.00,"NodeId":"algo-1","Timestamp":1739752979.509646}
