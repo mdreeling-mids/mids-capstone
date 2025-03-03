@@ -10,6 +10,7 @@ const API_URL = "https://s389gubjia.execute-api.us-west-2.amazonaws.com/producti
 function App() {
     const [questions, setQuestions] = useState([]);
     const [answers, setAnswers] = useState({});
+    const [orderedVariables, setOrderedVariables] = useState([]);
     const [prediction, setPrediction] = useState(null);
 
     useEffect(() => {
@@ -43,8 +44,10 @@ function App() {
             complete: (result) => {
                 const parsedQuestions = [];
                 const defaultAnswers = {};
+                const variableOrder = [];
                 
                 result.data.forEach(row => {
+                    variableOrder.push(row.Variable_name);
                     let options = null;
                     try {
                         if (row.Variable_answers && row.Hide !== "Yes") {
@@ -55,24 +58,26 @@ function App() {
                     }
                     
                     if (row.Hide === "Yes") {
-                        // If Hide is Yes, use the default integer value from Variable_answers
                         defaultAnswers[row.Variable_name] = parseInt(row.Variable_answers, 10) || 0;
                     } else {
                         parsedQuestions.push({
                             variable: row.Variable_name,
-                            context: row.Variable_context || "", // Include context
+                            context: row.Variable_context || "", 
                             question: row.Variable_label,
                             options: options,
                         });
-                        // Default dropdown to first option
+                        
                         if (options && options.length > 0) {
                             defaultAnswers[row.Variable_name] = options[0].value;
+                        } else if (options?.range) {
+                            defaultAnswers[row.Variable_name] = options.range.min;
                         }
                     }
                 });
                 
                 setQuestions(parsedQuestions);
-                setAnswers(defaultAnswers); // Pre-fill hidden values and set defaults
+                setAnswers(defaultAnswers);
+                setOrderedVariables(variableOrder);
             }
         });
     };
@@ -83,7 +88,7 @@ function App() {
 
     const handleSubmit = async () => {
         try {
-            const featureValues = Object.values(answers);
+            const featureValues = orderedVariables.map(varName => answers[varName]);
             const response = await axios.post(API_URL, { features: featureValues });
             const result = JSON.parse(response.data.body).prediction;
             setPrediction(result);
@@ -97,7 +102,7 @@ function App() {
             <Card style={{ padding: "24px", boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)", maxWidth: "500px", width: "100%", borderRadius: "12px", backgroundColor: "#ffffff" }}>
                 <CardContent style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                     <FaCalculator style={{ color: "#007bff", fontSize: "40px", marginBottom: "16px" }} />
-                    <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" }}>MathChecker</h1>
+                    <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" }}>EMRI (Early Math Risk Idenitifier)</h1>
                     <p style={{ color: "#555", marginBottom: "16px" }}>Answer the following questions:</p>
                     <input type="file" accept=".csv" onChange={handleFileUpload} style={{ marginBottom: "16px" }} />
 
@@ -121,7 +126,7 @@ function App() {
                                     min={q.options?.range?.min || 1}
                                     max={q.options?.range?.max || 10}
                                     step={q.options?.range?.step || 1}
-                                    value={answers[q.variable] || q.options?.range?.min || 1}
+                                    value={answers[q.variable] ?? q.options?.range?.min}
                                     onChange={(e, newValue) => handleInputChange(q.variable, newValue)}
                                     valueLabelDisplay="auto"
                                 />
