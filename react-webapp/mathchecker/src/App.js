@@ -41,25 +41,38 @@ function App() {
             dynamicTyping: true,
             skipEmptyLines: true,
             complete: (result) => {
-                const parsedQuestions = result.data.map(row => {
+                const parsedQuestions = [];
+                const defaultAnswers = {};
+                
+                result.data.forEach(row => {
                     let options = null;
                     try {
-                        if (row.Variable_answers) {
+                        if (row.Variable_answers && row.Hide !== "Yes") {
                             options = JSON.parse(row.Variable_answers.replace(/""/g, '"'));
                         }
                     } catch (error) {
                         console.error("Error parsing JSON for:", row.Variable_name, error);
                     }
-
-                    return {
-                        variable: row.Variable_name,
-                        context: row.Variable_context || "", // Include context
-                        question: row.Variable_label,
-                        options: options,
-                    };
+                    
+                    if (row.Hide === "Yes") {
+                        // If Hide is Yes, use the default integer value from Variable_answers
+                        defaultAnswers[row.Variable_name] = parseInt(row.Variable_answers, 10) || 0;
+                    } else {
+                        parsedQuestions.push({
+                            variable: row.Variable_name,
+                            context: row.Variable_context || "", // Include context
+                            question: row.Variable_label,
+                            options: options,
+                        });
+                        // Default dropdown to first option
+                        if (options && options.length > 0) {
+                            defaultAnswers[row.Variable_name] = options[0].value;
+                        }
+                    }
                 });
-
+                
                 setQuestions(parsedQuestions);
+                setAnswers(defaultAnswers); // Pre-fill hidden values and set defaults
             }
         });
     };
@@ -84,7 +97,7 @@ function App() {
             <Card style={{ padding: "24px", boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)", maxWidth: "500px", width: "100%", borderRadius: "12px", backgroundColor: "#ffffff" }}>
                 <CardContent style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                     <FaCalculator style={{ color: "#007bff", fontSize: "40px", marginBottom: "16px" }} />
-                    <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" }}>EMRI (Early Math Risk Idenitifier)</h1>
+                    <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" }}>MathChecker</h1>
                     <p style={{ color: "#555", marginBottom: "16px" }}>Answer the following questions:</p>
                     <input type="file" accept=".csv" onChange={handleFileUpload} style={{ marginBottom: "16px" }} />
 
@@ -97,7 +110,7 @@ function App() {
                             {Array.isArray(q.options) ? (
                                 <FormControl fullWidth>
                                     <InputLabel>Select an option</InputLabel>
-                                    <Select value={answers[q.variable] || ""} onChange={(e) => handleInputChange(q.variable, e.target.value)}>
+                                    <Select value={answers[q.variable]} onChange={(e) => handleInputChange(q.variable, e.target.value)}>
                                         {q.options.map((opt, i) => (
                                             <MenuItem key={i} value={opt.value}>{opt.text}</MenuItem>
                                         ))}
