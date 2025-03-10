@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Papa from "papaparse";
 import { useSearchParams } from "react-router-dom";
-import { FaCalculator } from "react-icons/fa";
+import { FaCalculator, FaChalkboardTeacher } from "react-icons/fa";
 import { Card, CardContent, Button, Select, MenuItem, FormControl, InputLabel, Slider } from "@mui/material";
 
 const CSV_DRIVE_URL = "https://docs.google.com/spreadsheets/d/101r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744/export?format=csv&id=101r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744&gid=0";
@@ -122,12 +122,15 @@ function App() {
     return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", backgroundColor: "#f0f2f5", padding: "20px" }}>
             <Card style={{ padding: "24px", boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)", maxWidth: "500px", width: "100%", borderRadius: "12px", backgroundColor: "#ffffff" }}>
-                <CardContent style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                    <FaCalculator style={{ color: "#007bff", fontSize: "40px", marginBottom: "16px" }} />
-                    <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" }}>MathChecker</h1>
+            <CardContent style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    {isAdminMode ? (
+                        <FaChalkboardTeacher style={{ color: "#d9534f", fontSize: "40px", marginBottom: "16px" }} />
+                    ) : (
+                        <FaCalculator style={{ color: "#007bff", fontSize: "40px", marginBottom: "16px" }} />
+                    )}
+                    <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" }}>{isAdminMode ? "EMRI Teacher / Administrator Mode" : "EMRI (Early Math Risk Identifier)"}</h1>
+                    
                     <p style={{ color: "#555", marginBottom: "16px" }}>Answer the following questions:</p>
-                    <input type="file" accept=".csv" onChange={handleFileUpload} style={{ marginBottom: "16px" }} />
-
                     {questions.map((q, index) => (
                         <div key={index} style={{ width: "100%", marginBottom: "16px" }}>
                             {q.context && (
