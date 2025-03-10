@@ -27,7 +27,7 @@ function App() {
             .then(response => {
                 parseCSV(response.data);
             })
-            .catch(error => console.error("Error fetching CSV from Google Drive:", error));
+            .catch(error => console.error("Error fetching CSV:", error));
     };
 
     const handleFileUpload = (event) => {
@@ -143,11 +143,21 @@ function App() {
                                         ))}
                                     </Select>
                                 </FormControl>
-                            ) : null}
+                            ) : (
+                                <Slider
+                                    min={q.options?.range?.min || 1}
+                                    max={q.options?.range?.max || 10}
+                                    step={q.options?.range?.step || 1}
+                                    value={answers[q.variable] ?? q.options?.range?.min}
+                                    onChange={(e, newValue) => handleInputChange(q.variable, newValue)}
+                                    valueLabelDisplay="auto"
+                                />
+                            )}
                         </div>
                     ))}
 
                     <Button onClick={handleSubmit} variant="contained" color="primary" style={{ marginTop: "24px" }}>{isAdminMode ? "Submit" : "Get Prediction"}</Button>
+                    {!isAdminMode && prediction !== null && <h3 style={{ marginTop: "16px", fontSize: "18px", fontWeight: "bold", color: "#007bff" }}>Predicted Math Proficiency: {prediction}</h3>}
                 </CardContent>
             </Card>
         </div>
