@@ -62,6 +62,9 @@ function App() {
                         console.error("Error parsing JSON for:", row.Variable_name, error);
                     }
                     
+                    console.log("Parsed Question:", row.Variable_name, "Context:", row.Variable_context, "Options:", options, "Range:", options?.range);
+                    
+                
                     if (isAdminMode) {
                         if (row.Admin_Only === "Yes") {
                             parsedQuestions.push({
@@ -111,8 +114,11 @@ function App() {
             const featureValues = orderedVariables.map(varName => answers[varName]);
             const response = await axios.post(isAdminMode ? ADMIN_API_URL : API_URL, { features: featureValues });
             if (!isAdminMode) {
+                console.log(typeof response.data.body);
                 const result = JSON.parse(response.data.body).prediction;
-                setPrediction(result);
+                const pred = JSON.parse(result).predictions;
+                console.log(pred[0]);
+                setPrediction(pred[0]);
             }
         } catch (error) {
             console.error("Error:", error);
@@ -151,7 +157,7 @@ function App() {
                                     min={q.options?.range?.min || 1}
                                     max={q.options?.range?.max || 10}
                                     step={q.options?.range?.step || 1}
-                                    value={answers[q.variable] ?? q.options?.range?.min}
+                                    value={answers[q.variable] !== undefined ? answers[q.variable] : q.options?.range?.min}
                                     onChange={(e, newValue) => handleInputChange(q.variable, newValue)}
                                     valueLabelDisplay="auto"
                                 />
