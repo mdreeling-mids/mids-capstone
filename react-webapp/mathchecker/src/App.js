@@ -112,18 +112,53 @@ function App() {
     const handleSubmit = async () => {
         try {
             const featureValues = orderedVariables.map(varName => answers[varName]);
-            const response = await axios.post(isAdminMode ? ADMIN_API_URL : API_URL, { features: featureValues });
+    
+            const response = await axios.post(
+                isAdminMode ? ADMIN_API_URL : API_URL,
+                {
+                    instances: [featureValues] // ✅ Wrap in array for batch format
+                },
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-amzn-sagemaker-target-model": "ThailandV2.model.tar.gz"
+                    }
+                }
+            );
+    
             if (!isAdminMode) {
-                console.log(typeof response.data.body);
-                const result = JSON.parse(response.data.body).prediction;
-                const pred = JSON.parse(result).predictions;
-                console.log(pred[0]);
-                setPrediction(pred[0]);
+                console.log("📦 Full Axios response:", response);
+                console.log("📦 response.data:", response.data);
+            
+                let rawPredictionBlock = response.data;
+            
+                // Some setups wrap it under `body`, others don’t
+                if (typeof rawPredictionBlock === "string") {
+                    rawPredictionBlock = JSON.parse(rawPredictionBlock);
+                }
+            
+                const innerPredictionString = rawPredictionBlock?.prediction;
+            
+                if (typeof innerPredictionString === "string") {
+                    const parsedPrediction = JSON.parse(innerPredictionString);
+                    const value = parsedPrediction?.predictions?.[0]?.[0];
+            
+                    if (value !== undefined) {
+                        setPrediction(value);
+                    } else {
+                        console.error("⚠️ Prediction format invalid:", parsedPrediction);
+                    }
+                } else {
+                    console.error("⚠️ No 'prediction' string in response:", rawPredictionBlock);
+                }
             }
+            
+            
         } catch (error) {
             console.error("Error:", error);
         }
     };
+    
 
     return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", backgroundColor: "#f0f2f5", padding: "20px" }}>
