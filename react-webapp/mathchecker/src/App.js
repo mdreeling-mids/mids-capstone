@@ -4,6 +4,7 @@ import Papa from "papaparse";
 import { useSearchParams } from "react-router-dom";
 import { FaCalculator, FaChalkboardTeacher } from "react-icons/fa";
 import { Card, CardContent, Button, Select, MenuItem, FormControl, InputLabel, Slider } from "@mui/material";
+import { motion, AnimatePresence } from "framer-motion";
 
 const CSV_DRIVE_URL = "https://docs.google.com/spreadsheets/d/101r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744/export?format=csv&id=101r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744&gid=0";
 const API_URL = "https://s389gubjia.execute-api.us-west-2.amazonaws.com/production/predict";
@@ -33,6 +34,15 @@ function App() {
         }
     };
 
+    const getDisplayAnswer = (question) => {
+        const value = answers[question.variable];
+        if (Array.isArray(question.options)) {
+          const match = question.options.find(opt => opt.value === value);
+          return match ? match.text : value;
+        }
+        return value;
+      };
+
     useEffect(() => {
         fetchCSVFromDrive(countryConfig[selectedCountry].csv);
     }, []);
@@ -40,6 +50,10 @@ function App() {
     useEffect(() => {
         fetchCSVFromDrive(countryConfig[selectedCountry].csv);
     }, [selectedCountry]);
+
+    useEffect(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, [currentStep]);
 
     const fetchCSVFromDrive = (url) => {
         axios.get(url)
@@ -202,8 +216,18 @@ function App() {
                         <FaCalculator style={{ color: "#007bff", fontSize: "40px", marginBottom: "16px" }} />
                     )}
                     <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" }}>{isAdminMode ? "EMRI Teacher / Administrator Mode" : "EMRI (Early Math Risk Identifier)"}</h1>
-                    
-                    <p style={{ color: "#555", marginBottom: "16px" }}>Answer the following questions:</p>
+                    <p style={{ alignSelf: "flex-start", color: "#888", marginBottom: "8px" }}>
+                    Question {Math.min(currentStep + 1, questions.length + 1)} of {questions.length + 1}
+                    </p>
+                    <AnimatePresence mode="wait">
+                    <motion.div
+                        key={currentStep}
+                        initial={{ opacity: 0, x: 50 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -50 }}
+                        transition={{ duration: 0.3 }}
+                        style={{ width: "100%" }}
+                    >
                     {currentStep < questions.length ? (
                     (() => {
                         const q = questions[currentStep];
@@ -239,52 +263,70 @@ function App() {
                         );
                     })()
                     ) : (
-                    <>
+                        <>
                         <h3 style={{ marginBottom: "16px" }}>Summary</h3>
-                        <ul style={{ textAlign: "left" }}>
-                        {questions.map((q, index) => (
-                            <li key={index}><strong>{q.question}:</strong> {answers[q.variable]}</li>
-                        ))}
-                        </ul>
-                    </>
+                        <table style={{
+                          width: "100%",
+                          borderCollapse: "collapse",
+                          marginBottom: "24px",
+                          fontSize: "14px"
+                        }}>
+                          <thead>
+                            <tr style={{ backgroundColor: "#f5f5f5" }}>
+                              <th style={{ border: "1px solid #ccc", padding: "8px", textAlign: "left" }}>Question</th>
+                              <th style={{ border: "1px solid #ccc", padding: "8px", textAlign: "left" }}>Answer</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {questions.map((q, index) => (
+                              <tr key={index}>
+                                <td style={{ border: "1px solid #eee", padding: "8px" }}>{q.question}</td>
+                                <td style={{ border: "1px solid #eee", padding: "8px" }}>{getDisplayAnswer(q)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </>
+                      
                     )}
 
+                    </motion.div>
+                    </AnimatePresence>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: "24px", width: "100%" }}>
+                    <Button
+                        variant="outlined"
+                        disabled={currentStep === 0}
+                        onClick={() => setCurrentStep((prev) => prev - 1)}
+                    >
+                        Back
+                    </Button>
 
-<div style={{ display: "flex", justifyContent: "space-between", marginTop: "24px", width: "100%" }}>
-  <Button
-    variant="outlined"
-    disabled={currentStep === 0}
-    onClick={() => setCurrentStep((prev) => prev - 1)}
-  >
-    Back
-  </Button>
-
-  {currentStep < questions.length - 1 ? (
-    <Button
-      variant="contained"
-      color="primary"
-      onClick={() => setCurrentStep((prev) => prev + 1)}
-    >
-      Next
-    </Button>
-  ) : currentStep === questions.length - 1 ? (
-    <Button
-      variant="contained"
-      color="primary"
-      onClick={() => setCurrentStep((prev) => prev + 1)}
-    >
-      Review
-    </Button>
-  ) : (
-    <Button
-      variant="contained"
-      color="primary"
-      onClick={handleSubmit}
-    >
-      Submit
-    </Button>
-  )}
-</div>
+                    {currentStep < questions.length - 1 ? (
+                        <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => setCurrentStep((prev) => prev + 1)}
+                        >
+                        Next
+                        </Button>
+                    ) : currentStep === questions.length - 1 ? (
+                        <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => setCurrentStep((prev) => prev + 1)}
+                        >
+                        Review
+                        </Button>
+                    ) : (
+                        <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleSubmit}
+                        >
+                        Submit
+                        </Button>
+                    )}
+                    </div>
 
                     {!isAdminMode && prediction !== null && <h3 style={{ marginTop: "16px", fontSize: "18px", fontWeight: "bold", color: "#007bff" }}>Predicted Math Proficiency: {prediction}</h3>}
                 </CardContent>
