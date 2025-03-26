@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const CSV_DRIVE_URL = "https://docs.google.com/spreadsheets/d/101r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744/export?format=csv&id=101r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744&gid=0";
 const API_URL = "https://s389gubjia.execute-api.us-west-2.amazonaws.com/production/predict";
 const ADMIN_API_URL = "https://placeholder-admin-endpoint.com/submit";
+const RECOMMENDATION_CUTOFF = 0.66;
 
 function App() {
 
@@ -30,13 +31,50 @@ function App() {
     const countryConfig = {
         "United States": {
             model: "United_States.model.tar.gz",
-            csv: "https://docs.google.com/spreadsheets/d/101r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744/export?format=csv&id=101r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744&gid=0"
+            csv: "https://docs.google.com/spreadsheets/d/1FfRrQdpofKueFROn75V8OuFBgiQsPAKPpDQ67DA1G4I/export?format=csv&id=1FfRrQdpofKueFROn75V8OuFBgiQsPAKPpDQ67DA1G4I&gid=0"
         },
         "Thailand": {
             model: "ThailandV2.model.tar.gz",
             csv: "https://docs.google.com/spreadsheets/d/101r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744/export?format=csv&id=11r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744&gid=0"
         }
     };
+
+    const checkThreshold = (thresholdString, answerValue) => {
+        if (!thresholdString || answerValue == null) {
+          console.warn("🟡 Skipping check: invalid threshold or answer", {
+            thresholdString,
+            answerValue
+          });
+          return false;
+        }
+      
+        const match = thresholdString.match(/^([<>])\s*(\d+(\.\d+)?)$/);
+        if (!match) {
+          console.warn("❌ Threshold parse failed:", thresholdString);
+          return false;
+        }
+      
+        const operator = match[1];
+        const thresholdValue = parseFloat(match[2]);
+      
+        const result =
+          operator === "<"
+            ? answerValue < thresholdValue
+            : operator === ">"
+            ? answerValue > thresholdValue
+            : false;
+      
+        console.log("🧪 Threshold check:", {
+          variableAnswer: answerValue,
+          condition: thresholdString,
+          parsedOperator: operator,
+          thresholdValue,
+          result
+        });
+      
+        return result;
+      };
+      
 
     const getDisplayAnswer = (question) => {
         const value = answers[question.variable];
@@ -110,11 +148,15 @@ function App() {
                                 question: row.Variable_label,
                                 options: options,
                             });
-                            if (options && options.length > 0) {
-                                defaultAnswers[row.Variable_name] = options[0].value;
-                            } else if (options?.range) {
-                                defaultAnswers[row.Variable_name] = options.range.min;
-                            }
+                            if (!(row.Variable_name in defaultAnswers)) {
+                                if (Array.isArray(options)) {
+                                  defaultAnswers[row.Variable_name] = options[0].value;
+                                } else if (options?.range) {
+                                  defaultAnswers[row.Variable_name] = options.range.min;
+                                } else {
+                                  defaultAnswers[row.Variable_name] = null;
+                                }
+                              }
                         }
                     } else {
                         if (row.Hide === "Yes") {
@@ -125,14 +167,18 @@ function App() {
                                 context: row.Variable_context || "",
                                 question: row.Variable_label,
                                 options: options,
-                                recommendationThreshold: row.Recommendation_Threshold ? parseFloat(row.Recommendation_Threshold) : null,
+                                recommendationThreshold: row.Recommendation_Threshold || null,
                                 recommendationText: row.Recommended_Intervention || null
                               });
-                            if (options && options.length > 0) {
-                                defaultAnswers[row.Variable_name] = options[0].value;
-                            } else if (options?.range) {
-                                defaultAnswers[row.Variable_name] = options.range.min;
-                            }
+                              if (!(row.Variable_name in defaultAnswers)) {
+                                if (Array.isArray(options)) {
+                                  defaultAnswers[row.Variable_name] = options[0].value;
+                                } else if (options?.range) {
+                                  defaultAnswers[row.Variable_name] = options.range.min;
+                                } else {
+                                  defaultAnswers[row.Variable_name] = null;
+                                }
+                              }
                         }
                     }
                 });
@@ -184,6 +230,7 @@ function App() {
             
                     if (value !== undefined) {
                         setPrediction(value);
+                        // Only show recommendations if prediction is at or below cutoff
                         setShowRecommendations(true);
                         setHasSubmitted(true);
                     } else {
@@ -260,7 +307,9 @@ function App() {
                     {currentStep < questions.length ? (
                     (() => {
                         const q = questions[currentStep];
+                        console.log("Rendering question:", q, "with value:", answers[q.variable],  "on step:", currentStep);
                         return (
+                            
                         <div key={currentStep} style={{ width: "100%", marginBottom: "16px" }}>
                             {q.context && (
                             <p style={{ fontStyle: "italic", color: "#777", marginBottom: "8px" }}>{q.context}</p>
@@ -268,16 +317,18 @@ function App() {
                             <p style={{ fontWeight: "bold" }}>{q.question}</p>
                             {Array.isArray(q.options) ? (
                             <FormControl fullWidth>
-                                <InputLabel>Select an option</InputLabel>
-                                <Select
-                                value={answers[q.variable]}
-                                onChange={(e) => handleInputChange(q.variable, e.target.value)}
-                                >
-                                {q.options.map((opt, i) => (
-                                    <MenuItem key={i} value={opt.value}>{opt.text}</MenuItem>
-                                ))}
-                                </Select>
-                            </FormControl>
+                            <InputLabel id={`label-${q.variable}`}>Select an option</InputLabel>
+                            <Select
+                              labelId={`label-${q.variable}`}
+                              value={answers[q.variable]}
+                              onChange={(e) => handleInputChange(q.variable, e.target.value)}
+                            >
+                              {q.options.map((opt, i) => (
+                                <MenuItem key={i} value={opt.value}>{opt.text}</MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                          
                             ) : (
                             <Slider
                                 min={q.options?.range?.min || 1}
@@ -385,11 +436,10 @@ function App() {
 
                 {showRecommendations && (
                 <>
-                    <h2 style={{ marginBottom: "16px" }}>Recommended Interventions</h2>
+                    <h2 style={{ marginBottom: "16px" }}>EMRI Nueral Net Model Results</h2>
                     {questions.filter(q =>
-                    q.recommendationThreshold !== null &&
-                    answers[q.variable] < q.recommendationThreshold
-                    ).length === 0 ? (
+                    checkThreshold(q.recommendationThreshold, answers[q.variable])
+                    ).length === 0 ?  (
                     <p>No specific recommendations based on your responses.</p>
                     ) : (
                         <>
@@ -409,9 +459,8 @@ function App() {
                         <tbody>
                         {questions
                             .filter(q =>
-                            q.recommendationThreshold !== null &&
-                            answers[q.variable] < q.recommendationThreshold
-                            )
+                                checkThreshold(q.recommendationThreshold, answers[q.variable])
+                              )
                             .map((q, index) => (
                             <tr key={index}>
                                 <td style={{ border: "1px solid #eee", padding: "8px" }}>{q.question}</td>
