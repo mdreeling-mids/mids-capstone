@@ -10,6 +10,9 @@ const API_URL = "https://s389gubjia.execute-api.us-west-2.amazonaws.com/producti
 const ADMIN_API_URL = "https://placeholder-admin-endpoint.com/submit";
 
 function App() {
+
+    const [currentStep, setCurrentStep] = useState(0);
+
     const [searchParams] = useSearchParams();
     const isAdminMode = searchParams.get("admin") === "true";
 
@@ -201,35 +204,88 @@ function App() {
                     <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" }}>{isAdminMode ? "EMRI Teacher / Administrator Mode" : "EMRI (Early Math Risk Identifier)"}</h1>
                     
                     <p style={{ color: "#555", marginBottom: "16px" }}>Answer the following questions:</p>
-                    {questions.map((q, index) => (
-                        <div key={index} style={{ width: "100%", marginBottom: "16px" }}>
+                    {currentStep < questions.length ? (
+                    (() => {
+                        const q = questions[currentStep];
+                        return (
+                        <div key={currentStep} style={{ width: "100%", marginBottom: "16px" }}>
                             {q.context && (
-                                <p style={{ fontStyle: "italic", color: "#777", marginBottom: "8px" }}>{q.context}</p>
+                            <p style={{ fontStyle: "italic", color: "#777", marginBottom: "8px" }}>{q.context}</p>
                             )}
                             <p style={{ fontWeight: "bold" }}>{q.question}</p>
                             {Array.isArray(q.options) ? (
-                                <FormControl fullWidth>
-                                    <InputLabel>Select an option</InputLabel>
-                                    <Select value={answers[q.variable]} onChange={(e) => handleInputChange(q.variable, e.target.value)}>
-                                        {q.options.map((opt, i) => (
-                                            <MenuItem key={i} value={opt.value}>{opt.text}</MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
+                            <FormControl fullWidth>
+                                <InputLabel>Select an option</InputLabel>
+                                <Select
+                                value={answers[q.variable]}
+                                onChange={(e) => handleInputChange(q.variable, e.target.value)}
+                                >
+                                {q.options.map((opt, i) => (
+                                    <MenuItem key={i} value={opt.value}>{opt.text}</MenuItem>
+                                ))}
+                                </Select>
+                            </FormControl>
                             ) : (
-                                <Slider
-                                    min={q.options?.range?.min || 1}
-                                    max={q.options?.range?.max || 10}
-                                    step={q.options?.range?.step || 1}
-                                    value={answers[q.variable] !== undefined ? answers[q.variable] : q.options?.range?.min}
-                                    onChange={(e, newValue) => handleInputChange(q.variable, newValue)}
-                                    valueLabelDisplay="auto"
-                                />
+                            <Slider
+                                min={q.options?.range?.min || 1}
+                                max={q.options?.range?.max || 10}
+                                step={q.options?.range?.step || 1}
+                                value={answers[q.variable] ?? q.options?.range?.min}
+                                onChange={(e, newValue) => handleInputChange(q.variable, newValue)}
+                                valueLabelDisplay="auto"
+                            />
                             )}
                         </div>
-                    ))}
+                        );
+                    })()
+                    ) : (
+                    <>
+                        <h3 style={{ marginBottom: "16px" }}>Summary</h3>
+                        <ul style={{ textAlign: "left" }}>
+                        {questions.map((q, index) => (
+                            <li key={index}><strong>{q.question}:</strong> {answers[q.variable]}</li>
+                        ))}
+                        </ul>
+                    </>
+                    )}
 
-                    <Button onClick={handleSubmit} variant="contained" color="primary" style={{ marginTop: "24px" }}>{isAdminMode ? "Submit" : "Get Prediction"}</Button>
+
+<div style={{ display: "flex", justifyContent: "space-between", marginTop: "24px", width: "100%" }}>
+  <Button
+    variant="outlined"
+    disabled={currentStep === 0}
+    onClick={() => setCurrentStep((prev) => prev - 1)}
+  >
+    Back
+  </Button>
+
+  {currentStep < questions.length - 1 ? (
+    <Button
+      variant="contained"
+      color="primary"
+      onClick={() => setCurrentStep((prev) => prev + 1)}
+    >
+      Next
+    </Button>
+  ) : currentStep === questions.length - 1 ? (
+    <Button
+      variant="contained"
+      color="primary"
+      onClick={() => setCurrentStep((prev) => prev + 1)}
+    >
+      Review
+    </Button>
+  ) : (
+    <Button
+      variant="contained"
+      color="primary"
+      onClick={handleSubmit}
+    >
+      Submit
+    </Button>
+  )}
+</div>
+
                     {!isAdminMode && prediction !== null && <h3 style={{ marginTop: "16px", fontSize: "18px", fontWeight: "bold", color: "#007bff" }}>Predicted Math Proficiency: {prediction}</h3>}
                 </CardContent>
             </Card>
