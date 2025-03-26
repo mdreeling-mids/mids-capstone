@@ -160,7 +160,7 @@ function App() {
                         }
                     } else {
                         if (row.Hide === "Yes") {
-                            defaultAnswers[row.Variable_name] = parseInt(row.Variable_answers, 10) || 0;
+                            defaultAnswers[row.Variable_name] = parseInt(row.Hidden_Value, 10) || 0;
                         } else {
                             parsedQuestions.push({
                                 variable: row.Variable_name,
