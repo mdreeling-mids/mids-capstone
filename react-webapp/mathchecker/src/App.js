@@ -12,7 +12,10 @@ const ADMIN_API_URL = "https://placeholder-admin-endpoint.com/submit";
 
 function App() {
 
+    const [hasSubmitted, setHasSubmitted] = useState(false);
     const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
+    const [showRecommendations, setShowRecommendations] = useState(false);
+
     const [currentStep, setCurrentStep] = useState(0);
 
     const [searchParams] = useSearchParams();
@@ -119,10 +122,12 @@ function App() {
                         } else {
                             parsedQuestions.push({
                                 variable: row.Variable_name,
-                                context: row.Variable_context || "", 
+                                context: row.Variable_context || "",
                                 question: row.Variable_label,
                                 options: options,
-                            });
+                                recommendationThreshold: row.Recommendation_Threshold ? parseFloat(row.Recommendation_Threshold) : null,
+                                recommendationText: row.Recommended_Intervention || null
+                              });
                             if (options && options.length > 0) {
                                 defaultAnswers[row.Variable_name] = options[0].value;
                             } else if (options?.range) {
@@ -179,6 +184,8 @@ function App() {
             
                     if (value !== undefined) {
                         setPrediction(value);
+                        setShowRecommendations(true);
+                        setHasSubmitted(true);
                     } else {
                         console.error("⚠️ Prediction format invalid:", parsedPrediction);
                     }
@@ -281,10 +288,22 @@ function App() {
                                 valueLabelDisplay="auto"
                             />
                             )}
+                            {/* ✅ Resubmit button shows only after initial submission */}
+                            {hasSubmitted && (
+                                <div style={{ display: "flex", justifyContent: "center", marginTop: "24px" }}>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    onClick={handleSubmit}
+                                >
+                                    Resubmit
+                                </Button>
+                                </div>
+                            )}
                         </div>
                         );
                     })()
-                    ) : (
+                    ) : !showRecommendations && (
                         <>
                         <h3 style={{ marginBottom: "16px" }}>Summary</h3>
                         <table style={{
@@ -308,6 +327,7 @@ function App() {
                             ))}
                           </tbody>
                         </table>
+                       
                       </>
                       
                     )}
@@ -318,7 +338,14 @@ function App() {
                     <Button
                         variant="outlined"
                         disabled={currentStep === 0}
-                        onClick={() => setCurrentStep((prev) => prev - 1)}
+                        onClick={() => {
+                            if (showRecommendations) {
+                              setShowRecommendations(false);
+                              setCurrentStep(questions.length); // Go back to the summary
+                            } else {
+                              setCurrentStep((prev) => prev - 1);
+                            }
+                          }}
                     >
                         Back
                     </Button>
@@ -350,8 +377,73 @@ function App() {
                     )}
                     </div>
 
-                    {!isAdminMode && prediction !== null && <h3 style={{ marginTop: "16px", fontSize: "18px", fontWeight: "bold", color: "#007bff" }}>Predicted Math Proficiency: {prediction}</h3>}
-                  </>
+                    {!isAdminMode && prediction !== null && !showRecommendations && (
+                <h3 style={{ marginTop: "16px", fontSize: "18px", fontWeight: "bold", color: "#007bff" }}>
+                    Predicted Math Proficiency: {prediction}
+                </h3>
+                )}
+
+                {showRecommendations && (
+                <>
+                    <h2 style={{ marginBottom: "16px" }}>Recommended Interventions</h2>
+                    {questions.filter(q =>
+                    q.recommendationThreshold !== null &&
+                    answers[q.variable] < q.recommendationThreshold
+                    ).length === 0 ? (
+                    <p>No specific recommendations based on your responses.</p>
+                    ) : (
+                        <>
+                    <table style={{
+                        width: "100%",
+                        borderCollapse: "collapse",
+                        marginBottom: "24px",
+                        fontSize: "14px"
+                    }}>
+                        <thead>
+                        <tr style={{ backgroundColor: "#f5f5f5" }}>
+                            <th style={{ border: "1px solid #ccc", padding: "8px" }}>Question</th>
+                            <th style={{ border: "1px solid #ccc", padding: "8px" }}>Your Answer</th>
+                            <th style={{ border: "1px solid #ccc", padding: "8px" }}>Recommendation</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {questions
+                            .filter(q =>
+                            q.recommendationThreshold !== null &&
+                            answers[q.variable] < q.recommendationThreshold
+                            )
+                            .map((q, index) => (
+                            <tr key={index}>
+                                <td style={{ border: "1px solid #eee", padding: "8px" }}>{q.question}</td>
+                                <td style={{ border: "1px solid #eee", padding: "8px" }}>{getDisplayAnswer(q)}</td>
+                                <td style={{ border: "1px solid #eee", padding: "8px" }}>{q.recommendationText}</td>
+                            </tr>
+                            ))}
+                        </tbody>
+                    </table>
+
+                    <div style={{ display: "flex", justifyContent: "center", marginTop: "32px" }}>
+                    <Button
+                    variant="outlined"
+                    color="secondary"
+                    onClick={() => {
+                        setCurrentStep(0);
+                        setDisclaimerAccepted(false);
+                        setShowRecommendations(false);
+                        setPrediction(null);
+                        setAnswers({});
+                        setQuestions([]);
+                        fetchCSVFromDrive(countryConfig[selectedCountry].csv); // Reload CSV
+                    }}
+                    >
+                    Start Over
+                    </Button>
+                    </div>
+                    </>
+                    )}
+                </>
+                )}
+                </>
                 )}
                 </CardContent>
             </Card>
