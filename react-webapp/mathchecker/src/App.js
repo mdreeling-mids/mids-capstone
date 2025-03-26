@@ -18,12 +18,28 @@ function App() {
     const [orderedVariables, setOrderedVariables] = useState([]);
     const [prediction, setPrediction] = useState(null);
 
+    const [selectedCountry, setSelectedCountry] = useState("United States");
+    const countryConfig = {
+        "United States": {
+            model: "United_States.model.tar.gz",
+            csv: "https://docs.google.com/spreadsheets/d/101r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744/export?format=csv&id=101r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744&gid=0"
+        },
+        "Thailand": {
+            model: "ThailandV2.model.tar.gz",
+            csv: "https://docs.google.com/spreadsheets/d/101r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744/export?format=csv&id=11r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744&gid=0"
+        }
+    };
+
     useEffect(() => {
-        fetchCSVFromDrive();
+        fetchCSVFromDrive(countryConfig[selectedCountry].csv);
     }, []);
 
-    const fetchCSVFromDrive = () => {
-        axios.get(CSV_DRIVE_URL)
+    useEffect(() => {
+        fetchCSVFromDrive(countryConfig[selectedCountry].csv);
+    }, [selectedCountry]);
+
+    const fetchCSVFromDrive = (url) => {
+        axios.get(url)
             .then(response => {
                 parseCSV(response.data);
             })
@@ -121,7 +137,7 @@ function App() {
                 {
                     headers: {
                         "Content-Type": "application/json",
-                        "x-amzn-sagemaker-target-model": "ThailandV2.model.tar.gz"
+                        "x-amzn-sagemaker-target-model": countryConfig[selectedCountry].model
                     }
                 }
             );
@@ -162,6 +178,19 @@ function App() {
 
     return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", backgroundColor: "#f0f2f5", padding: "20px" }}>
+            <div style={{ position: "absolute", top: 20, right: 20 }}>
+    <FormControl variant="outlined" size="small">
+        <InputLabel>Choose Country</InputLabel>
+        <Select
+            value={selectedCountry}
+            onChange={(e) => setSelectedCountry(e.target.value)}
+            label="Choose Country"
+        >
+            <MenuItem value="United States">United States</MenuItem>
+            <MenuItem value="Thailand">Thailand</MenuItem>
+        </Select>
+    </FormControl>
+</div>
             <Card style={{ padding: "24px", boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)", maxWidth: "500px", width: "100%", borderRadius: "12px", backgroundColor: "#ffffff" }}>
             <CardContent style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                     {isAdminMode ? (
