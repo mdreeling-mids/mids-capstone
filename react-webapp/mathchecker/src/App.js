@@ -437,6 +437,11 @@ function App() {
                 {showRecommendations && (
                 <>
                     <h2 style={{ marginBottom: "16px" }}>EMRI Nueral Net Model Results</h2>
+                    {prediction !== null && (
+  <p style={{ fontSize: "16px", fontWeight: "bold", color: "#007bff", marginBottom: "16px" }}>
+    Predicted Math Proficiency Score: {prediction.toFixed(2)}
+  </p>
+)}
                     {questions.filter(q =>
                     checkThreshold(q.recommendationThreshold, answers[q.variable])
                     ).length === 0 ?  (
