@@ -35,7 +35,7 @@ function App() {
         },
         "Thailand": {
             model: "ThailandV2.model.tar.gz",
-            csv: "https://docs.google.com/spreadsheets/d/101r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744/export?format=csv&id=11r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744&gid=0"
+            csv: "https://docs.google.com/spreadsheets/d/1XMxllwL8DJ3QjZ54QrHRiZrUIsZX17DE4lMyshKOFz4/export?format=csv&gid=0"
         }
     };
 
