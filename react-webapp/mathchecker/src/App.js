@@ -30,7 +30,7 @@ function App() {
     const [selectedCountry, setSelectedCountry] = useState("United States");
     const countryConfig = {
         "United States": {
-            model: "United_States.model.tar.gz",
+            model: "United_StatesV3.model.tar.gz",
             csv: "https://docs.google.com/spreadsheets/d/1FfRrQdpofKueFROn75V8OuFBgiQsPAKPpDQ67DA1G4I/export?format=csv&id=1FfRrQdpofKueFROn75V8OuFBgiQsPAKPpDQ67DA1G4I&gid=0"
         },
         "Thailand": {
