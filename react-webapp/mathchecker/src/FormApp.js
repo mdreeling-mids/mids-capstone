@@ -3,13 +3,13 @@ import axios from "axios";
 import Papa from "papaparse";
 import { useSearchParams } from "react-router-dom";
 import { FaCalculator, FaChalkboardTeacher } from "react-icons/fa";
+import { FaCheckCircle, FaInfoCircle } from "react-icons/fa";
 import { Card, CardContent, Button, Select, MenuItem, FormControl, InputLabel, Slider } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 
 const CSV_DRIVE_URL = "https://docs.google.com/spreadsheets/d/101r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744/export?format=csv&id=101r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744&gid=0";
 const API_URL = "https://s389gubjia.execute-api.us-west-2.amazonaws.com/production/predict";
 const ADMIN_API_URL = "https://placeholder-admin-endpoint.com/submit";
-const RECOMMENDATION_CUTOFF = 0.66;
 
 function App() {
 
@@ -31,11 +31,13 @@ function App() {
     const countryConfig = {
         "United States": {
             model: "United_StatesV4.model.tar.gz",
-            csv: "https://docs.google.com/spreadsheets/d/143ubpB8HUqK6P2e0WB3vdfrfFXVd_2N_zdI8zqLWIpc/export?format=csv&gid=0"
+            csv: "https://docs.google.com/spreadsheets/d/143ubpB8HUqK6P2e0WB3vdfrfFXVd_2N_zdI8zqLWIpc/export?format=csv&gid=0",
+            cutoff: "0.68"
         },
         "Thailand": {
             model: "ThailandV2.model.tar.gz",
-            csv: "https://docs.google.com/spreadsheets/d/1XMxllwL8DJ3QjZ54QrHRiZrUIsZX17DE4lMyshKOFz4/export?format=csv&gid=0"
+            csv: "https://docs.google.com/spreadsheets/d/1XMxllwL8DJ3QjZ54QrHRiZrUIsZX17DE4lMyshKOFz4/export?format=csv&gid=0",
+            cutoff: "0.68"
         }
     };
 
@@ -230,8 +232,9 @@ function App() {
             
                     if (value !== undefined) {
                         setPrediction(value);
-                        // Only show recommendations if prediction is at or below cutoff
-                        setShowRecommendations(true);
+                        const countryCutoff = countryConfig[selectedCountry].cutoff;
+                        const shouldShow = value < countryCutoff;
+                        setShowRecommendations(shouldShow);
                         setHasSubmitted(true);
                     } else {
                         console.error("⚠️ Prediction format invalid:", parsedPrediction);
@@ -428,24 +431,31 @@ function App() {
                     )}
                     </div>
 
-                    {!isAdminMode && prediction !== null && !showRecommendations && (
-                <h3 style={{ marginTop: "16px", fontSize: "18px", fontWeight: "bold", color: "#007bff" }}>
-                    Predicted Math Proficiency: {prediction}
-                </h3>
-                )}
 
                 {showRecommendations && (
-                <>
-                    <h2 style={{ marginBottom: "16px" }}>EMRI Nueral Net Model Results</h2>
+                <>  
+                    <FaInfoCircle style={{ color: "#ffc107", fontSize: "32px", marginBottom: "12px" }} />
+                    <h2 style={{ marginBottom: "16px" }}>EMRI Neural Net Model Results</h2>
+                    <p style={{ fontSize: "15px", color: "#333", maxWidth: "400px", textAlign: "center" }}>
+                    Our model believes that the answers provided may indicate a lack of proficiency in math. Below are the observations.
+                    </p>
                     {prediction !== null && (
-  <p style={{ fontSize: "16px", fontWeight: "bold", color: "#007bff", marginBottom: "16px" }}>
-    Predicted Math Proficiency Score: {prediction.toFixed(2)}
-  </p>
-)}
+                    <p style={{
+                        fontSize: "16px",
+                        fontWeight: "bold",
+                        color: prediction < countryConfig[selectedCountry].cutoff ? "rgb(145, 6, 126)" : "#28a745",
+                        marginBottom: "8px"
+                      }}>
+                        Predicted Math Proficiency Score: {(prediction * 100).toFixed(0)}%
+                      </p>
+                    )}
+                    <p style={{ fontSize: "14px", color: "#666", marginBottom: "24px" }}>
+                    Cutoff for {selectedCountry}: {(countryConfig[selectedCountry].cutoff * 100).toFixed(0)}%
+                    </p>
                     {questions.filter(q =>
                     checkThreshold(q.recommendationThreshold, answers[q.variable])
                     ).length === 0 ?  (
-                    <p>No specific recommendations based on your responses.</p>
+                    <p>No specific observations based on your responses.</p>
                     ) : (
                         <>
                     <table style={{
@@ -458,7 +468,7 @@ function App() {
                         <tr style={{ backgroundColor: "#f5f5f5" }}>
                             <th style={{ border: "1px solid #ccc", padding: "8px" }}>Question</th>
                             <th style={{ border: "1px solid #ccc", padding: "8px" }}>Your Answer</th>
-                            <th style={{ border: "1px solid #ccc", padding: "8px" }}>Recommendation</th>
+                            <th style={{ border: "1px solid #ccc", padding: "8px" }}>Observations</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -497,6 +507,22 @@ function App() {
                     )}
                 </>
                 )}
+                {hasSubmitted && prediction !== null && !showRecommendations && (
+                <>  
+                    <FaCheckCircle style={{ color: "#28a745", fontSize: "32px", marginBottom: "12px" }} />
+                    <h2 style={{ marginBottom: "16px" }}>EMRI Neural Net Model Results</h2>
+                    <p style={{ fontSize: "16px", fontWeight: "bold", color: "#007bff", marginBottom: "8px" }}>
+                    Predicted Math Proficiency Score: {(prediction * 100).toFixed(0)}%
+                    </p>
+                    <p style={{ fontSize: "14px", color: "#666", marginBottom: "24px" }}>
+                    Cutoff for {selectedCountry}: {(countryConfig[selectedCountry].cutoff * 100).toFixed(0)}%
+                    </p>
+                    <p style={{ fontSize: "15px", color: "#333", maxWidth: "400px", textAlign: "center" }}>
+                    There are no recommendations based on your answers as the prediction provided by the model indicates a proficiency in math.
+                    </p>
+                </>
+                )}
+
                 </>
                 )}
                 </CardContent>
