@@ -7,7 +7,6 @@ import { FaCheckCircle, FaInfoCircle } from "react-icons/fa";
 import { Card, CardContent, Button, Select, MenuItem, FormControl, InputLabel, Slider } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 
-const CSV_DRIVE_URL = "https://docs.google.com/spreadsheets/d/101r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744/export?format=csv&id=101r-pZRkVnf3m13zUXXmjMgBzsKWXyerFvwu9efm744&gid=0";
 const API_URL = "https://s389gubjia.execute-api.us-west-2.amazonaws.com/production/predict";
 const ADMIN_API_URL = "https://placeholder-admin-endpoint.com/submit";
 
@@ -27,19 +26,51 @@ function App() {
     const [orderedVariables, setOrderedVariables] = useState([]);
     const [prediction, setPrediction] = useState(null);
 
+    
+
+    const [countryConfig, setCountryConfig] = useState({});
     const [selectedCountry, setSelectedCountry] = useState("United States");
-    const countryConfig = {
-        "United States": {
-            model: "United_StatesV4.model.tar.gz",
-            csv: "https://docs.google.com/spreadsheets/d/143ubpB8HUqK6P2e0WB3vdfrfFXVd_2N_zdI8zqLWIpc/export?format=csv&gid=0",
-            cutoff: "0.68"
-        },
-        "Thailand": {
-            model: "ThailandV2.model.tar.gz",
-            csv: "https://docs.google.com/spreadsheets/d/1XMxllwL8DJ3QjZ54QrHRiZrUIsZX17DE4lMyshKOFz4/export?format=csv&gid=0",
-            cutoff: "0.68"
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        async function loadConfig() {
+          const config = await loadCountryConfigFromSheet(); // your async loader
+          setCountryConfig(config);
         }
-    };
+        loadConfig();
+      }, []);
+
+    async function loadCountryConfigFromSheet() {
+        
+        const SHEET_ID = '1ZyW4c0TLM8PvFI2iXCxbRugIOFM1_g97lWhSYa4RrH4';
+        const GID = '0'; // usually 0 for the first sheet
+        const url  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
+
+      
+        try {
+            const response = await fetch(url);
+            const text = await response.text();
+            
+            console.log('Raw text from cell A1:', text); // 👈 Add this
+            
+            const firstCell = text.split('\n')[0].replace(/^"|"$/g, ''); // Trim outer quotes
+            const cleaned = firstCell.replace(/""/g, '"'); // Unescape double quotes
+            console.log('Cleaned and fixed:', cleaned);
+
+            const config = JSON.parse(cleaned);
+            
+          console.log('Loaded config:', config);
+          return config;
+        } catch (error) {
+          console.error('Failed to load or parse config:', error);
+          return {};
+        }
+      }
+      
+    loadCountryConfigFromSheet().then(countryConfig => {
+        const usModel = countryConfig["United States"].model;
+        console.log("US model path:", usModel);
+      });
 
     const checkThreshold = (thresholdString, answerValue) => {
         if (!thresholdString || answerValue == null) {
@@ -88,23 +119,29 @@ function App() {
       };
 
     useEffect(() => {
-        fetchCSVFromDrive(countryConfig[selectedCountry].csv);
-    }, []);
-
-    useEffect(() => {
-        fetchCSVFromDrive(countryConfig[selectedCountry].csv);
-    }, [selectedCountry]);
+    if (
+      countryConfig &&
+      Object.keys(countryConfig).length > 0 &&
+      countryConfig[selectedCountry]
+    ) {
+      fetchCSVFromDrive(countryConfig[selectedCountry].csv);
+    }
+  }, [countryConfig, selectedCountry]);
 
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }, [currentStep]);
 
     const fetchCSVFromDrive = (url) => {
-        axios.get(url)
-            .then(response => {
-                parseCSV(response.data);
-            })
-            .catch(error => console.error("Error fetching CSV:", error));
+    setIsLoading(true);
+    axios.get(url)
+        .then(response => {
+        parseCSV(response.data);
+        })
+        .catch(error => console.error("Error fetching CSV:", error))
+        .finally(() => {
+        setIsLoading(false);
+        });
     };
 
     const handleFileUpload = (event) => {
@@ -253,19 +290,34 @@ function App() {
 
     return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", backgroundColor: "#f0f2f5", padding: "20px" }}>
+            <div style={{ position: "absolute", top: 20, left: 20 }}>
+            <span style={{ fontSize: "14px", fontWeight: "bold", color: "#555" }}>
+                Current Question Set Loaded: {selectedCountry.replace(/_/g, ' ')}
+            </span>
+            </div>
             <div style={{ position: "absolute", top: 20, right: 20 }}>
-    <FormControl variant="outlined" size="small">
-        <InputLabel>Choose Country</InputLabel>
-        <Select
-            value={selectedCountry}
-            onChange={(e) => setSelectedCountry(e.target.value)}
-            label="Choose Country"
-        >
-            <MenuItem value="United States">United States</MenuItem>
-            <MenuItem value="Thailand">Thailand</MenuItem>
-        </Select>
-    </FormControl>
-</div>
+                <FormControl variant="outlined" size="small">
+                    <InputLabel>Choose Country</InputLabel>
+                    <Select
+                value={selectedCountry}
+                onChange={(e) => setSelectedCountry(e.target.value)}
+                label="Choose Country"
+            >
+                {Object.keys(countryConfig).map((country) => (
+                    <MenuItem key={country} value={country}>
+                        {country}
+                    </MenuItem>
+                ))}
+            </Select>
+                </FormControl>
+            </div>      
+            {isLoading && (
+            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}>
+                <p style={{ fontWeight: "bold", marginBottom: "8px" }}>Loading question set...</p>
+                <div className="spinner" />
+            </div>
+            )}
+
             <Card style={{ padding: "24px", boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)", maxWidth: "500px", width: "100%", borderRadius: "12px", backgroundColor: "#ffffff" }}>
             <CardContent style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                     {isAdminMode ? (
