@@ -6,6 +6,7 @@ import { FaCalculator, FaChalkboardTeacher } from "react-icons/fa";
 import { FaCheckCircle, FaInfoCircle } from "react-icons/fa";
 import { Card, CardContent, Button, Select, MenuItem, FormControl, InputLabel, Slider } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
+import CircularProgress from '@mui/material/CircularProgress';
 
 const API_URL = "https://s389gubjia.execute-api.us-west-2.amazonaws.com/production/predict";
 const ADMIN_API_URL = "https://placeholder-admin-endpoint.com/submit";
@@ -47,6 +48,7 @@ function App() {
     const [isLoading, setIsLoading] = useState(false);
 
     const [debugRightLog, setDebugRightLog] = useState([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const debugRight = (msg) => {
         setDebugRightLog((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
@@ -277,6 +279,8 @@ function App() {
 
     const handleSubmit = async () => {
         try {
+            setIsSubmitting(true); // 🟡 show spinner
+
             const featureValues = orderedVariables.map(varName => answers[varName]);
     
             const response = await axios.post(
@@ -326,12 +330,14 @@ function App() {
             
         } catch (error) {
             console.error("Error:", error);
+        } finally {
+            setIsSubmitting(false); // ✅ hide spinner
         }
     };
     
 
     return (
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", gap: "24px", padding: "20px", minHeight: "100vh", backgroundColor: "#f0f2f5" }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", gap: "24px", padding: "80px 30px 30px", minHeight: "100vh", backgroundColor: "#f0f2f5" }}>
              <div style={{ position: "absolute", top: 20, right: 200 }}>
             <label style={{ fontSize: "14px", color: "#555" }}>
                 <input
@@ -359,7 +365,7 @@ function App() {
             )}
             <div style={{ position: "absolute", top: 20, left: 20 }}>
             <span style={{ fontSize: "14px", fontWeight: "bold", color: "#555" }}>
-                Current Question Set Loaded: {selectedCountry.replace(/_/g, ' ')}
+                Loaded: {selectedCountry.replace(/_/g, ' ')}
             </span>
             </div>
             <div style={{ position: "absolute", top: 20, right: 20 }}>
@@ -385,6 +391,11 @@ function App() {
             </div>
             )}
            <Card style={{ padding: "24px", boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)", maxWidth: "500px", width: "100%", borderRadius: "12px", backgroundColor: "#ffffff" }}>
+           {isSubmitting && (
+            <div style={{ marginBottom: "16px", display: "flex", justifyContent: "center" }}>
+                <CircularProgress color="primary" />
+            </div>
+            )}
            <CardContent style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                     {isAdminMode ? (
                         <FaChalkboardTeacher style={{ color: "#d9534f", fontSize: "40px", marginBottom: "16px" }} />
