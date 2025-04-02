@@ -6,9 +6,24 @@ import { FaCalculator, FaChalkboardTeacher } from "react-icons/fa";
 import { FaCheckCircle, FaInfoCircle } from "react-icons/fa";
 import { Card, CardContent, Button, Select, MenuItem, FormControl, InputLabel, Slider } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
+import CircularProgress from '@mui/material/CircularProgress';
 
 const API_URL = "https://s389gubjia.execute-api.us-west-2.amazonaws.com/production/predict";
 const ADMIN_API_URL = "https://placeholder-admin-endpoint.com/submit";
+
+const debugPanelStyle = {
+    width: "300px",
+    maxHeight: "90vh",
+    overflowY: "auto",
+    backgroundColor: "#fff",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    padding: "16px",
+    fontSize: "12px",
+    fontFamily: "monospace",
+    color: "#333",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
+  };
 
 function App() {
 
@@ -26,11 +41,18 @@ function App() {
     const [orderedVariables, setOrderedVariables] = useState([]);
     const [prediction, setPrediction] = useState(null);
 
-    
+    const [showDebug, setShowDebug] = useState(false);
 
     const [countryConfig, setCountryConfig] = useState({});
     const [selectedCountry, setSelectedCountry] = useState("United States");
     const [isLoading, setIsLoading] = useState(false);
+
+    const [debugRightLog, setDebugRightLog] = useState([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const debugRight = (msg) => {
+        setDebugRightLog((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+      };
 
     useEffect(() => {
         async function loadConfig() {
@@ -134,6 +156,13 @@ function App() {
 
     const fetchCSVFromDrive = (url) => {
     setIsLoading(true);
+    // Reset everything when country changes
+    setHasSubmitted(false);
+    setShowRecommendations(false);
+    setPrediction(null);
+    setCurrentStep(0);
+    setAnswers({});
+    setQuestions([]);
     axios.get(url)
         .then(response => {
         parseCSV(response.data);
@@ -141,6 +170,7 @@ function App() {
         .catch(error => console.error("Error fetching CSV:", error))
         .finally(() => {
         setIsLoading(false);
+        debugRight("CSV loaded");
         });
     };
 
@@ -155,6 +185,7 @@ function App() {
         }
     };
 
+
     const parseCSV = (csvData) => {
         Papa.parse(csvData, {
             header: true,
@@ -165,7 +196,14 @@ function App() {
                 const defaultAnswers = {};
                 const variableOrder = [];
                 
+                let totalQuestions = result.data.length;
+                let hiddenCount = 0;
+                let adminOnlyCount = 0;
+
                 result.data.forEach(row => {
+                    if (row.Hide === "Yes") hiddenCount++;
+                    if (row.Admin_Only === "Yes") adminOnlyCount++;
+
                     variableOrder.push(row.Variable_name);
                     let options = null;
                     try {
@@ -225,6 +263,12 @@ function App() {
                 setQuestions(parsedQuestions);
                 setAnswers(defaultAnswers);
                 setOrderedVariables(variableOrder);
+
+                debugRight(
+                    `${totalQuestions} questions loaded from CSV. ` +
+                    `${hiddenCount} marked as hidden, ` +
+                    `${adminOnlyCount} marked as Admin Only.`
+                  );
             }
         });
     };
@@ -235,6 +279,8 @@ function App() {
 
     const handleSubmit = async () => {
         try {
+            setIsSubmitting(true); // 🟡 show spinner
+
             const featureValues = orderedVariables.map(varName => answers[varName]);
     
             const response = await axios.post(
@@ -284,15 +330,42 @@ function App() {
             
         } catch (error) {
             console.error("Error:", error);
+        } finally {
+            setIsSubmitting(false); // ✅ hide spinner
         }
     };
     
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", backgroundColor: "#f0f2f5", padding: "20px" }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", gap: "24px", padding: "80px 30px 30px", minHeight: "100vh", backgroundColor: "#f0f2f5" }}>
+             <div style={{ position: "absolute", top: 20, right: 200 }}>
+            <label style={{ fontSize: "14px", color: "#555" }}>
+                <input
+                type="checkbox"
+                checked={showDebug}
+                onChange={(e) => setShowDebug(e.target.checked)}
+                style={{ marginLeft: "8px" }}
+                />
+                Show Debug Info
+            </label>
+            </div>
+            {showDebug && (
+            <div style={debugPanelStyle}>
+                <h4 style={{ marginTop: 0, fontSize: "14px", borderBottom: "1px solid #eee", paddingBottom: "8px" }}>Debug Window</h4>
+                <pre>{JSON.stringify({
+            country: selectedCountry,
+            step: currentStep,
+            prediction,
+            cutoff: countryConfig[selectedCountry]?.cutoff,
+            answers,
+            hasSubmitted,
+            showRecommendations
+            }, null, 2)}</pre>
+            </div>
+            )}
             <div style={{ position: "absolute", top: 20, left: 20 }}>
             <span style={{ fontSize: "14px", fontWeight: "bold", color: "#555" }}>
-                Current Question Set Loaded: {selectedCountry.replace(/_/g, ' ')}
+                Loaded: {selectedCountry.replace(/_/g, ' ')}
             </span>
             </div>
             <div style={{ position: "absolute", top: 20, right: 20 }}>
@@ -317,9 +390,13 @@ function App() {
                 <div className="spinner" />
             </div>
             )}
-
-            <Card style={{ padding: "24px", boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)", maxWidth: "500px", width: "100%", borderRadius: "12px", backgroundColor: "#ffffff" }}>
-            <CardContent style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+           <Card style={{ padding: "24px", boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)", maxWidth: "500px", width: "100%", borderRadius: "12px", backgroundColor: "#ffffff" }}>
+           {isSubmitting && (
+            <div style={{ marginBottom: "16px", display: "flex", justifyContent: "center" }}>
+                <CircularProgress color="primary" />
+            </div>
+            )}
+           <CardContent style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                     {isAdminMode ? (
                         <FaChalkboardTeacher style={{ color: "#d9534f", fontSize: "40px", marginBottom: "16px" }} />
                     ) : (
@@ -332,6 +409,8 @@ function App() {
   This tool is part of a capstone project for the <strong>UC Berkeley Master of Information and Data Science (MIDS)</strong> program. It was developed using publicly available data from the <strong>2022 Programme for International Student Assessment (PISA)</strong> and is intended for exploratory and educational use only.
   <br /><br />
   Predictions generated by this tool should not be interpreted as definitive assessments of student ability. They are based on statistical models trained on international survey data and are intended to provide general guidance and insight.
+  <br /><br />
+  <strong>No personal information is stored when using this tool</strong>
   <br /><br />
   By clicking "I Agree," you acknowledge that you understand the limitations of this tool and agree to use it accordingly.
 </p>
@@ -579,6 +658,15 @@ function App() {
                 )}
                 </CardContent>
             </Card>
+
+            {showDebug && (
+            <div style={debugPanelStyle}>
+            <h4>Debug Right</h4>
+            <pre style={{ whiteSpace: "pre-wrap", wordWrap: "break-word" }}>
+  {debugRightLog.join("\n")}
+</pre>
+            </div>
+            )}
         </div>
     );
 }
