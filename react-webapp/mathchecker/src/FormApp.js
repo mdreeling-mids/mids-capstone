@@ -75,11 +75,13 @@ function App() {
             
             console.log('Raw text from cell A1:', text); // 👈 Add this
             
-            const firstCell = text.split('\n')[0].replace(/^"|"$/g, ''); // Trim outer quotes
-            const cleaned = firstCell.replace(/""/g, '"'); // Unescape double quotes
+            const firstCell = text.split('\n')[0];
+const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
+                         .replace(/""/g, '"')    // unescape inner quotes
+                         .trim();    
             console.log('Cleaned and fixed:', cleaned);
-
-            const config = JSON.parse(cleaned);
+            const sanitized = cleaned.replace(/["']+\s*$/, '');  // removes trailing " or ' at end
+            const config = JSON.parse(sanitized);
             
           console.log('Loaded config:', config);
           return config;
