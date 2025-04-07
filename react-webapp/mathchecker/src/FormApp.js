@@ -156,13 +156,16 @@ function App() {
 
     const fetchCSVFromDrive = (url) => {
     setIsLoading(true);
-    // Reset everything when country changes
-    setHasSubmitted(false);
-    setShowRecommendations(false);
-    setPrediction(null);
-    setCurrentStep(0);
-    setAnswers({});
-    setQuestions([]);
+
+    if(!showDebug) {
+      // Reset everything when country changes
+      setHasSubmitted(false);
+      setShowRecommendations(false);
+      setPrediction(null);
+      setCurrentStep(0);
+      setAnswers({});
+      setQuestions([]);
+    }
     axios.get(url)
         .then(response => {
         parseCSV(response.data);
@@ -185,6 +188,12 @@ function App() {
         }
     };
 
+    useEffect(() => {
+      if (showDebug && countryConfig[selectedCountry]?.csv) {
+        fetchCSVFromDrive(countryConfig[selectedCountry].csv);
+        debugRight("🔁 Debug mode enabled — reloading questions CSV.");
+      }
+    }, [showDebug]);
 
     const parseCSV = (csvData) => {
         Papa.parse(csvData, {
@@ -279,6 +288,9 @@ function App() {
 
     const handleSubmit = async () => {
         try {
+          const modelName = countryConfig[selectedCountry]?.model || "unknown-model";
+          const startTime = Date.now();
+          debugRight(`🚀 Calling SageMaker multi-model endpoint for model [${modelName}] @ [${API_URL}]`);
             setIsSubmitting(true); // 🟡 show spinner
 
             const featureValues = orderedVariables.map(varName => answers[varName]);
@@ -319,6 +331,8 @@ function App() {
                         const shouldShow = value < countryCutoff;
                         setShowRecommendations(shouldShow);
                         setHasSubmitted(true);
+                        const duration = Date.now() - startTime;
+                        debugRight(`✅ API call returned prediction: ${value} in ${duration} ms`);
                     } else {
                         console.error("⚠️ Prediction format invalid:", parsedPrediction);
                     }
@@ -397,6 +411,30 @@ function App() {
             </div>
             )}
            <CardContent style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    {showDebug && questions.length > 0 && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px", justifyContent: "center" }}>
+                        {questions.map((q, index) => (
+                          <button
+                            key={index}
+                            title={q.question}  // 🧠 this shows the tooltip
+                            onClick={() => setCurrentStep(index)}
+                            style={{
+                              padding: "6px 10px",
+                              fontSize: "12px",
+                              borderRadius: "4px",
+                              border: "1px solid #ccc",
+                              backgroundColor: index === currentStep ? "#007bff" : "#f0f0f0",
+                              color: index === currentStep ? "#fff" : "#333",
+                              cursor: "pointer"
+                            }}
+                          >
+                            {index + 1}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+
                     {isAdminMode ? (
                         <FaChalkboardTeacher style={{ color: "#d9534f", fontSize: "40px", marginBottom: "16px" }} />
                     ) : (
@@ -568,9 +606,9 @@ function App() {
                     <FaInfoCircle style={{ color: "#ffc107", fontSize: "32px", marginBottom: "12px" }} />
                     <h2 style={{ marginBottom: "16px" }}>EMRI Neural Net Model Results</h2>
                     <p style={{ fontSize: "15px", color: "#333", maxWidth: "400px", textAlign: "center" }}>
-                    Our model believes that the answers provided may indicate a lack of proficiency in math. Below are the observations.
+                    Our model believes that the answers provided may indicate a <strong><blue>lack of proficiency in math.</blue></strong> Below are the observations.
                     </p>
-                    {prediction !== null && (
+                    {showDebug && prediction !== null && (
                     <p style={{
                         fontSize: "16px",
                         fontWeight: "bold",
@@ -580,13 +618,15 @@ function App() {
                         Predicted Math Proficiency Score: {(prediction * 100).toFixed(0)}%
                       </p>
                     )}
+                    {showDebug && (
                     <p style={{ fontSize: "14px", color: "#666", marginBottom: "24px" }}>
                     Cutoff for {selectedCountry}: {(countryConfig[selectedCountry].cutoff * 100).toFixed(0)}%
-                    </p>
+                    </p> 
+                    )}
                     {questions.filter(q =>
                     checkThreshold(q.recommendationThreshold, answers[q.variable])
                     ).length === 0 ?  (
-                    <p>No specific observations based on your responses.</p>
+                    <p>There are no specific observations or recommendations based on your responses. This is not a cause for concern, it just means that the model did not receive enough information from the answers to be confident in recommendations</p>
                     ) : (
                         <>
                     <table style={{
@@ -611,7 +651,7 @@ function App() {
                             <tr key={index}>
                                 <td style={{ border: "1px solid #eee", padding: "8px" }}>{q.question}</td>
                                 <td style={{ border: "1px solid #eee", padding: "8px" }}>{getDisplayAnswer(q)}</td>
-                                <td style={{ border: "1px solid #eee", padding: "8px" }}>{q.recommendationText}</td>
+                                <td style={{ border: "1px solid #eee", padding: "8px" }} dangerouslySetInnerHTML={{ __html: q.recommendationText }} />
                             </tr>
                             ))}
                         </tbody>
@@ -642,15 +682,17 @@ function App() {
                 <>  
                     <FaCheckCircle style={{ color: "#28a745", fontSize: "32px", marginBottom: "12px" }} />
                     <h2 style={{ marginBottom: "16px" }}>EMRI Neural Net Model Results</h2>
+                    {showDebug && (<>
                     <p style={{ fontSize: "16px", fontWeight: "bold", color: "#007bff", marginBottom: "8px" }}>
                     Predicted Math Proficiency Score: {(prediction * 100).toFixed(0)}%
                     </p>
                     <p style={{ fontSize: "14px", color: "#666", marginBottom: "24px" }}>
                     Cutoff for {selectedCountry}: {(countryConfig[selectedCountry].cutoff * 100).toFixed(0)}%
-                    </p>
+                    </p>    </>   )}
                     <p style={{ fontSize: "15px", color: "#333", maxWidth: "400px", textAlign: "center" }}>
                     There are no recommendations based on your answers as the prediction provided by the model indicates a proficiency in math.
                     </p>
+
                 </>
                 )}
 
