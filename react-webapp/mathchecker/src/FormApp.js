@@ -49,6 +49,7 @@ function App() {
 
     const [debugRightLog, setDebugRightLog] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [metrics, setMetrics] = useState({});
 
     const debugRight = (msg) => {
         setDebugRightLog((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
@@ -149,6 +150,7 @@ const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
       countryConfig[selectedCountry]
     ) {
       fetchCSVFromDrive(countryConfig[selectedCountry].csv);
+      fetchMetricsFromDrive(countryConfig[selectedCountry].metrics);
     }
   }, [countryConfig, selectedCountry]);
 
@@ -177,6 +179,29 @@ const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
         setIsLoading(false);
         debugRight("CSV loaded");
         });
+    };
+
+    const fetchMetricsFromDrive = async (url) => {
+      try {
+        const response = await fetch(url);
+        const text = await response.text();
+        const [headerLine, valueLine] = text.trim().split("\n");
+        const headers = headerLine.split(",");
+        const values = valueLine.split(",");
+    
+        const metricsObj = {};
+        headers.forEach((key, index) => {
+          const value = parseFloat(values[index]);
+          metricsObj[key] = isNaN(value) ? values[index] : value;
+        });
+    
+        console.log("📊 Parsed metrics:", metricsObj);
+        setMetrics(metricsObj);
+        debugRight("✅ Metrics file parsed and loaded");
+      } catch (error) {
+        console.error("❌ Error loading metrics file:", error);
+        debugRight("❌ Failed to load metrics");
+      }
     };
 
     const handleFileUpload = (event) => {
@@ -395,6 +420,15 @@ const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
         </a>
       </p>
     )}
+
+<div style={{ marginTop: "16px" }}>
+    <h4 style={{ marginBottom: "8px" }}>📊 Evaluation Metrics</h4>
+    <ul style={{ paddingLeft: "16px", fontSize: "12px" }}>
+      {Object.entries(metrics).map(([key, value]) => (
+        <li key={key}><strong>{key}</strong>: {value}</li>
+      ))}
+    </ul>
+  </div>
 
     {/* CSV link */}
     {countryConfig[selectedCountry]?.csv && (
