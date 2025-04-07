@@ -365,7 +365,57 @@ function App() {
             </div>
             {showDebug && (
             <div style={debugPanelStyle}>
-                <h4 style={{ marginTop: 0, fontSize: "14px", borderBottom: "1px solid #eee", paddingBottom: "8px" }}>Debug Window</h4>
+                <h4 style={{ marginTop: 0, fontSize: "14px", borderBottom: "1px solid #eee", paddingBottom: "8px" }}>Useful Information & Variables</h4>
+                {/* Notebook link */}
+    {countryConfig[selectedCountry]?.notebook && (
+      <p style={{ fontSize: "12px", marginBottom: "8px" }}>
+        📓 Sample notebook:{" "}
+        <a
+          href={countryConfig[selectedCountry].notebook}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          View Notebook
+        </a>
+      </p>
+    )}
+
+    {/* S3 model link */}
+    {countryConfig[selectedCountry]?.model && (
+      <p style={{ fontSize: "12px", marginBottom: "8px" }}>
+        📦 Model in S3:{" "}
+        <a
+          href={`https://sagemaker-us-west-2-986030204467.s3.us-west-2.amazonaws.com/pisa2022/multi_model_artifacts/${countryConfig[selectedCountry].model}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Download
+        </a>
+      </p>
+    )}
+
+    {/* CSV link */}
+    {countryConfig[selectedCountry]?.csv && (
+  (() => {
+    const csvUrl = countryConfig[selectedCountry].csv;
+    const sheetMatch = csvUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    const sheetId = sheetMatch ? sheetMatch[1] : null;
+    const sheetViewUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}` : null;
+
+    return sheetViewUrl ? (
+      <p style={{ fontSize: "12px", marginBottom: "8px" }}>
+        📄 Question Config (Sheet):{" "}
+        <a
+          href={sheetViewUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          View Sheet
+        </a>
+      </p>
+    ) : null;
+  })()
+)}
                 <pre>{JSON.stringify({
             country: selectedCountry,
             step: currentStep,
@@ -703,7 +753,7 @@ function App() {
 
             {showDebug && (
             <div style={debugPanelStyle}>
-            <h4>Debug Right</h4>
+            <h4>Debug Log</h4>
             <pre style={{ whiteSpace: "pre-wrap", wordWrap: "break-word" }}>
   {debugRightLog.join("\n")}
 </pre>
