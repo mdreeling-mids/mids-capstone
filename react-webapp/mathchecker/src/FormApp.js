@@ -354,7 +354,7 @@ const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
             
                     if (value !== undefined) {
                         setPrediction(value);
-                        const countryCutoff = countryConfig[selectedCountry].cutoff;
+                        const countryCutoff = metrics['best_threshold'];
                         const shouldShow = value < countryCutoff;
                         setShowRecommendations(shouldShow);
                         setHasSubmitted(true);
@@ -456,7 +456,7 @@ const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
             country: selectedCountry,
             step: currentStep,
             prediction,
-            cutoff: countryConfig[selectedCountry]?.cutoff,
+            cutoff: metrics['best_threshold'],
             answers,
             hasSubmitted,
             showRecommendations
@@ -692,13 +692,32 @@ const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
                     <FaInfoCircle style={{ color: "#ffc107", fontSize: "32px", marginBottom: "12px" }} />
                     <h2 style={{ marginBottom: "16px" }}>EMRI Neural Net Model Results</h2>
                     <p style={{ fontSize: "15px", color: "#333", maxWidth: "400px", textAlign: "center" }}>
+                    <strong>About this model ({selectedCountry}): </strong>The overall accuracy of this prediction is {" "}
+                    <span style={{ color: "#007BFF", fontWeight: "bold" }}>
+                      {(metrics['test_accuracy'] * 100).toFixed(0)}%
+                    </span>. Among the students who are actually not proficient in math, 
+                    the accuracy of this prediction (i.e., true negative rate, specificity) is <span style={{ color: "#007BFF", fontWeight: "bold" }}>
+                      {(metrics['test_specificity'] * 100).toFixed(0)}%
+                    </span>. 
+                    Among the students who are actually proficient in math, 
+                    the accuracy of this prediction (i.e., true positive rate, recall) is  <span style={{ color: "#007BFF", fontWeight: "bold" }}>
+                      {(metrics['test_recall'] * 100).toFixed(0)}%
+                    </span>
+                    <br></br>
+                    <br></br>
+                    The <strong>AUC</strong> (Area Under the Curve, a metric which takes into account the true positive rate and false positive 
+                    rate across all the different thresholds that can be used for the binary classification) is <span style={{ color: "#007BFF", fontWeight: "bold" }}>
+                      {(metrics['test_auc'] * 100).toFixed(0)}%
+                    </span>
+                    </p>
+                    <p style={{ fontSize: "15px", color: "#333", maxWidth: "400px", textAlign: "center" }}>
                     Our model believes that the answers provided may indicate a <strong><blue>lack of proficiency in math.</blue></strong> Below are the observations.
                     </p>
                     {showDebug && prediction !== null && (
                     <p style={{
                         fontSize: "16px",
                         fontWeight: "bold",
-                        color: prediction < countryConfig[selectedCountry].cutoff ? "rgb(145, 6, 126)" : "#28a745",
+                        color: prediction < metrics['best_threshold'] ? "rgb(145, 6, 126)" : "#28a745",
                         marginBottom: "8px"
                       }}>
                         Predicted Math Proficiency Score: {(prediction * 100).toFixed(0)}%
@@ -706,7 +725,7 @@ const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
                     )}
                     {showDebug && (
                     <p style={{ fontSize: "14px", color: "#666", marginBottom: "24px" }}>
-                    Cutoff for {selectedCountry}: {(countryConfig[selectedCountry].cutoff * 100).toFixed(0)}%
+                    Cutoff for {selectedCountry}: {(metrics['best_threshold'] * 100).toFixed(0)}%
                     </p> 
                     )}
                     {questions.filter(q =>
@@ -773,7 +792,7 @@ const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
                     Predicted Math Proficiency Score: {(prediction * 100).toFixed(0)}%
                     </p>
                     <p style={{ fontSize: "14px", color: "#666", marginBottom: "24px" }}>
-                    Cutoff for {selectedCountry}: {(countryConfig[selectedCountry].cutoff * 100).toFixed(0)}%
+                    Cutoff for {selectedCountry}: {(metrics['best_threshold'] * 100).toFixed(0)}%
                     </p>    </>   )}
                     <p style={{ fontSize: "15px", color: "#333", maxWidth: "400px", textAlign: "center" }}>
                     There are no recommendations based on your answers as the prediction provided by the model indicates a proficiency in math.
