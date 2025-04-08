@@ -379,7 +379,7 @@ const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
 
     return (
         <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", gap: "24px", padding: "80px 30px 30px", minHeight: "100vh", backgroundColor: "#f0f2f5" }}>
-             <div style={{ position: "absolute", top: 20, right: 200 }}>
+             <div style={{ position: "absolute", top: 20, right: 800 }}>
             <label style={{ fontSize: "14px", color: "#555" }}>
                 <input
                 type="checkbox"
