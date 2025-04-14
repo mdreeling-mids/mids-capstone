@@ -228,6 +228,7 @@ const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
             dynamicTyping: true,
             skipEmptyLines: true,
             complete: (result) => {
+                const optionalQuestions = [];
                 const parsedQuestions = [];
                 const defaultAnswers = {};
                 const variableOrder = [];
@@ -237,6 +238,9 @@ const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
                 let adminOnlyCount = 0;
 
                 result.data.forEach(row => {
+
+                    const isOptional = row.Optional === "Yes";
+
                     if (row.Hide === "Yes") hiddenCount++;
                     if (row.Admin_Only === "Yes") adminOnlyCount++;
 
@@ -252,15 +256,19 @@ const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
                     
                     console.log("Parsed Question:", row.Variable_name, "Context:", row.Variable_context, "Options:", options, "Range:", options?.range);
                     
+                    const questionData = {
+                      variable: row.Variable_name,
+                      context: row.Variable_context || "",
+                      question: row.Variable_label,
+                      options: options,
+                      recommendationThreshold: row.Recommendation_Threshold || null,
+                      recommendationText: row.Recommended_Intervention || null,
+                      optional: isOptional
+                    };
                 
                     if (isAdminMode) {
                         if (row.Admin_Only === "Yes") {
-                            parsedQuestions.push({
-                                variable: row.Variable_name,
-                                context: row.Variable_context || "", 
-                                question: row.Variable_label,
-                                options: options,
-                            });
+                            parsedQuestions.push(questionData);
                             if (!(row.Variable_name in defaultAnswers)) {
                                 if (Array.isArray(options)) {
                                   defaultAnswers[row.Variable_name] = options[0].value;
@@ -275,23 +283,22 @@ const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
                         if (row.Hide === "Yes") {
                             defaultAnswers[row.Variable_name] = parseInt(row.Hidden_Value, 10) || 0;
                         } else {
-                            parsedQuestions.push({
-                                variable: row.Variable_name,
-                                context: row.Variable_context || "",
-                                question: row.Variable_label,
-                                options: options,
-                                recommendationThreshold: row.Recommendation_Threshold || null,
-                                recommendationText: row.Recommended_Intervention || null
-                              });
-                              if (!(row.Variable_name in defaultAnswers)) {
-                                if (Array.isArray(options)) {
-                                  defaultAnswers[row.Variable_name] = options[0].value;
-                                } else if (options?.range) {
-                                  defaultAnswers[row.Variable_name] = options.range.min;
-                                } else {
-                                  defaultAnswers[row.Variable_name] = null;
-                                }
+                            if (!(row.Variable_name in defaultAnswers)) {
+                              if (Array.isArray(options)) {
+                                defaultAnswers[row.Variable_name] = options[0].value;
+                              } else if (options?.range) {
+                                defaultAnswers[row.Variable_name] = options.range.min;
+                              } else {
+                                defaultAnswers[row.Variable_name] = null;
                               }
+                            }
+
+                            if (isOptional) {
+                              defaultAnswers[row.Variable_name] = parseInt(row.Hidden_Value, 10) || 0;
+                              optionalQuestions.push(questionData); // defer optional to end
+                            } else {
+                              parsedQuestions.push(questionData);
+                            }
                         }
                     }
                 });
@@ -305,6 +312,8 @@ const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
                     `${hiddenCount} marked as hidden, ` +
                     `${adminOnlyCount} marked as Admin Only.`
                   );
+
+                parsedQuestions.push(...optionalQuestions);
             }
         });
     };
@@ -577,8 +586,24 @@ const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
                         const q = questions[currentStep];
                         console.log("Rendering question:", q, "with value:", answers[q.variable],  "on step:", currentStep);
                         return (
-                            
-                        <div key={currentStep} style={{ width: "100%", marginBottom: "16px" }}>
+                        
+                          
+                          <div
+                          key={currentStep}
+                          style={{
+                            width: "100%",
+                            marginBottom: "16px",
+                            backgroundColor: q.optional ? "#f0f9ff" : "transparent",
+                            padding: q.optional ? "16px" : "0",
+                            borderRadius: q.optional ? "8px" : "0",
+                            border: q.optional ? "1px solid #cce4f6" : "none"
+                          }}
+                        >
+                          {q.optional && (
+                            <p style={{ fontStyle: "italic", color: "#0077cc", marginBottom: "8px" }}>
+                              This question is optional (i.e., you can skip it if you prefer). Instead, an average value (shown below) will be sent to the model.
+                            </p>
+                          )}
                             {q.context && (
                             <p style={{ fontStyle: "italic", color: "#777", marginBottom: "8px" }}>{q.context}</p>
                             )}
