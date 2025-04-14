@@ -8,7 +8,11 @@ export default function LandingPage() {
     <div style={{ fontFamily: "'Segoe UI', sans-serif", backgroundColor: "#f9fafb", color: "#333" }}>
       {/* Header */}
       <header style={{ padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "white", boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}>
-        <h1 style={{ fontSize: "24px", fontWeight: "bold", color: "#007bff" }}>Get EMRI</h1>
+      <img
+          src="/emri-logo-tps-512.png"
+          alt="Get EMRI Logo"
+          style={{ height: "75px" }} // Adjust size as needed
+        />
         <nav>
           <Link to="#features" style={{ margin: "0 12px", color: "#333", textDecoration: "none" }}>Features</Link>
           <Link to="#about" style={{ margin: "0 12px", color: "#333", textDecoration: "none" }}>About</Link>
