@@ -324,27 +324,29 @@ const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
 
     const handleSubmit = async () => {
         try {
-          const modelName = countryConfig[selectedCountry]?.model || "unknown-model";
-          const startTime = Date.now();
-          debugRight(`🚀 Calling SageMaker multi-model endpoint for model [${modelName}] @ [${API_URL}]`);
-            setIsSubmitting(true); // 🟡 show spinner
-
-            const featureValues = orderedVariables.map(varName => answers[varName]);
-    
-            const response = await axios.post(
-                isAdminMode ? ADMIN_API_URL : API_URL,
-                {
-                    instances: [featureValues] // ✅ Wrap in array for batch format
-                },
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                        "x-amzn-sagemaker-target-model": countryConfig[selectedCountry].model
-                    }
-                }
-            );
+          
     
             if (!isAdminMode) {
+              const modelName = countryConfig[selectedCountry]?.model || "unknown-model";
+              const startTime = Date.now();
+              debugRight(`🚀 Calling SageMaker multi-model endpoint for model [${modelName}] @ [${API_URL}]`);
+                setIsSubmitting(true); // 🟡 show spinner
+    
+                const featureValues = orderedVariables.map(varName => answers[varName]);
+        
+                const response = await axios.post(
+                    isAdminMode ? ADMIN_API_URL : API_URL,
+                    {
+                        instances: [featureValues] // ✅ Wrap in array for batch format
+                    },
+                    {
+                        headers: {
+                            "Content-Type": "application/json",
+                            "x-amzn-sagemaker-target-model": countryConfig[selectedCountry].model
+                        }
+                    }
+                );
+
                 console.log("📦 Full Axios response:", response);
                 console.log("📦 response.data:", response.data);
             
@@ -375,6 +377,30 @@ const cleaned = firstCell.replace(/^"|"$/g, '')  // remove outer quotes
                 } else {
                     console.error("⚠️ No 'prediction' string in response:", rawPredictionBlock);
                 }
+            }
+            
+            if (isAdminMode) {
+              const sheetId = '143ubpB8HUqK6P2e0WB3vdfrfFXVd_2N_zdI8zqLWIpc'; // Admin mode bugfix United States
+              const adminSubmitUrl = `https://script.google.com/macros/s/AKfycbyJQiC4yqj534BKi1wQJZjZprRzSUmd9oojsFLIwDrGVvvWZo639VhiyJILt9kO9-O8/exec`;
+              const updates = orderedVariables.map(variable => ({
+                variable,
+                value: answers[variable]
+              }));
+            
+              try {
+                await fetch(`${adminSubmitUrl}?sheetId=${sheetId}`, {
+                  redirect: "follow",
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "text/plain;charset=utf-8",
+                  },
+                  body: JSON.stringify({ answers: updates })
+                });
+                debugRight("✅ Admin: Hidden_Value cells updated in Google Sheet");
+              } catch (err) {
+                console.error("❌ Admin update failed:", err);
+                debugRight("❌ Admin: Failed to update Google Sheet");
+              }
             }
             
             
